@@ -1,37 +1,31 @@
 import requests
-import time
 import json
 import os
-from datetime import datetime
 
 API_URL = "https://fahrinfo.vbb.de/restproxy/latest/disruptions"
 STATE_FILE = "state.json"
-CHECK_INTERVAL = 300  # 5 Minuten
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 
-def log(msg):
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
-
-
-def send_telegram(message):
+def send_telegram(msg):
     if not TELEGRAM_TOKEN or not CHAT_ID:
-        log("⚠️ Telegram nicht konfiguriert")
+        print("Telegram nicht konfiguriert")
         return
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "HTML"
-    }
-
     try:
-        requests.post(url, json=payload, timeout=10)
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            json={
+                "chat_id": CHAT_ID,
+                "text": msg,
+                "parse_mode": "HTML"
+            },
+            timeout=10
+        )
     except Exception as e:
-        log(f"Telegram Fehler: {e}")
+        print("Telegram Fehler:", e)
 
 
 def load_state():
@@ -52,9 +46,13 @@ def save_state(state):
 
 
 def fetch_disruptions():
-    res = requests.get(API_URL, timeout=10)
-    res.raise_for_status()
-    return res.json()
+    try:
+        res = requests.get(API_URL, timeout=10)
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        print("API Fehler:", e)
+        return []
 
 
 def format_message(prefix, disruption):
@@ -64,43 +62,37 @@ def format_message(prefix, disruption):
 
 
 def main():
-    log("🚀 Monitor gestartet")
-
     old_state = load_state()
+    disruptions = fetch_disruptions()
 
-    while True:
-        try:
-            disruptions = fetch_disruptions()
-            current_state = {d["id"]: d for d in disruptions if "id" in d}
+    current_state = {d["id"]: d for d in disruptions if "id" in d}
 
-            old_ids = set(old_state.keys())
-            current_ids = set(current_state.keys())
+    old_ids = set(old_state.keys())
+    current_ids = set(current_state.keys())
 
-            new_ids = current_ids - old_ids
-            resolved_ids = old_ids - current_ids
+    new_ids = current_ids - old_ids
+    resolved_ids = old_ids - current_ids
 
-            # Neue Störungen
-            for nid in new_ids:
-                msg = format_message("🆕 Neue Störung", current_state[nid])
-                log(msg)
-                send_telegram(msg)
+    if new_ids:
+        print("Neue Störungen gefunden")
 
-            # Behobene Störungen
-            for rid in resolved_ids:
-                msg = format_message("✅ Behoben", old_state[rid])
-                log(msg)
-                send_telegram(msg)
+    for nid in new_ids:
+        msg = format_message("🆕 Neue Störung", current_state[nid])
+        print(msg)
+        send_telegram(msg)
 
-            if not new_ids and not resolved_ids:
-                log("😴 Keine Änderungen")
+    if resolved_ids:
+        print("Behobene Störungen gefunden")
 
-            save_state(current_state)
-            old_state = current_state
+    for rid in resolved_ids:
+        msg = format_message("✅ Behoben", old_state[rid])
+        print(msg)
+        send_telegram(msg)
 
-        except Exception as e:
-            log(f"❌ Fehler: {e}")
+    if not new_ids and not resolved_ids:
+        print("Keine Änderungen")
 
-        time.sleep(CHECK_INTERVAL)
+    save_state(current_state)
 
 
 if __name__ == "__main__":

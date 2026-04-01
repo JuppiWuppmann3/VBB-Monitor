@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-API_URL = "https://fahrinfo.vbb.de/restproxy/latest/disruptions"
+API_URL = "https://fahrinfo.vbb.de/restproxy/latest/himsearch"
 STATE_FILE = "state.json"
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")

@@ -47,9 +47,22 @@ def save_state(state):
 
 def fetch_disruptions():
     try:
-        res = requests.get(API_URL, timeout=10)
-        res.raise_for_status()
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+        }
+
+        res = requests.get(API_URL, headers=headers, timeout=10)
+
+        print("Status Code:", res.status_code)
+
+        # Debug: falls keine JSON Antwort
+        if res.status_code != 200:
+            print("Antwort:", res.text[:200])
+            return []
+
         return res.json()
+
     except Exception as e:
         print("API Fehler:", e)
         return []

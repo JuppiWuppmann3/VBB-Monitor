@@ -1,12 +1,12 @@
 name: VBB Telegram Bot
 
+permissions:
+  contents: write
+
 on:
   schedule:
-    - cron: "*/10 * * * *"  # alle 10 Minuten
+    - cron: "*/10 * * * *"
   workflow_dispatch:
-
-permissions:
-  contents: write  
 
 jobs:
   run-bot:
@@ -35,5 +35,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add data.json
-          git commit -m "Update sent IDs" || echo "No changes"
+          git commit -m "Update data" || echo "No changes"
           git push

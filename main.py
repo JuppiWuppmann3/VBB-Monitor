@@ -97,16 +97,18 @@ def run_bot_cycle():
     print("📡 API liefert:", len(current_items), "Einträge")
 
     current_data = {}
+    changes_detected = False  # 👈 NEU
 
     for item in current_items:
         if not item.get("act", False):
             continue
         item_id = str(item.get("id"))
-        current_data[item_id] = item  # Ganzes Item speichern
+        current_data[item_id] = item
 
         if item_id not in old_data:
             print("➡️ Neue Störung:", item.get("head"))
             send_telegram(format_message(item, new=True))
+            changes_detected = True  # 👈 NEU
 
     for old_id, old_item in old_data.items():
         if old_id not in current_data:
@@ -114,6 +116,11 @@ def run_bot_cycle():
                 old_item = {"head": old_item}
             print("➡️ Entfernt:", old_item.get("head"))
             send_telegram(format_message(old_item, new=False))
+            changes_detected = True  # 👈 NEU
+
+    # 👇 NEU: Wenn nichts passiert ist
+    if not changes_detected:
+        print("ℹ️ Keine Änderungen – alles aktuell")
 
     save_data(current_data)
     print("💾 Gespeichert:", len(current_data))

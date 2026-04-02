@@ -36,10 +36,17 @@ def get_disruptions():
         print("🌐 Status Code:", res.status_code)
 
         data = res.json()
-
         print("🔍 Keys:", data.keys())
 
-        return data.get("HIMMessage", [])
+        # 🔥 FIX: beide Varianten abfangen
+        if "HIMMessage" in data:
+            return data["HIMMessage"]
+        elif "Message" in data:
+            return data["Message"]
+        else:
+            print("⚠️ Unbekannte API Struktur")
+            return []
+
     except Exception as e:
         print("❌ API Fehler:", e)
         return []

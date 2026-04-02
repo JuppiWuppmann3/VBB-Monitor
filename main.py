@@ -1,35 +1,40 @@
 import requests
 import json
 import os
+import time
 
-# 🔹 API URL für VBB
+# VBB API URL
 VBB_URL = "https://fahrinfo.vbb.de/restproxy/latest/himsearch?accessId=lipsius-4f41-ab9c-1d54b21c347a&format=json"
 
-# 🔹 Telegram Secrets
+# Telegram
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# 🔹 Datei zum Speichern alter Meldungen
+# Datei zum Speichern alter Meldungen
 DATA_FILE = "data.json"
-
 
 def load_data():
     try:
         with open(DATA_FILE, "r") as f:
             data = json.load(f)
-            # Alte Liste → Dict konvertieren
+            # Alte Struktur checken
             if isinstance(data, list):
                 print("⚠️ Alte Datenstruktur erkannt → wird konvertiert")
                 return {}
-            return data
+            # Strings → Dict
+            fixed_data = {}
+            for k, v in data.items():
+                if isinstance(v, dict):
+                    fixed_data[k] = v
+                else:
+                    fixed_data[k] = {"head": v}
+            return fixed_data
     except:
         return {}
-
 
 def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f)
-
 
 def get_disruptions():
     try:
@@ -49,7 +54,6 @@ def get_disruptions():
         print("❌ API Fehler:", e)
         return []
 
-
 def format_message(item, new=True):
     title = item.get("head", "Keine Überschrift")
     desc = item.get("text", "")
@@ -60,37 +64,29 @@ def format_message(item, new=True):
             desc = ""
 
     # Linien extrahieren
-    lines = [prod.get("name") for prod in item.get("affectedProduct", []) if prod.get("name")]
+    lines = []
+    for prod in item.get("affectedProduct", []):
+        name = prod.get("name")
+        if name:
+            lines.append(name)
+
     line_info = f"Linien: {', '.join(lines)}\n" if lines else ""
-
     if new:
-        prefix = "🚧 *Neue Störung*\n\n"
+        return f"🚧 *Neue Störung*\n\n*{title}*\n{line_info}{desc}"
     else:
-        prefix = "✅ *Störung behoben*\n\n"
-
-    return f"{prefix}*{title}*\n{line_info}{desc}"
-
+        return f"✅ *Störung behoben*\n\n*{title}*\n{desc}"
 
 def send_telegram(message):
-    if not TELEGRAM_TOKEN or not CHAT_ID:
-        print("❌ Telegram Token oder Chat ID nicht gesetzt!")
-        return
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown"
-    }
+    payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
     try:
         r = requests.post(url, json=payload)
         print("📤 Telegram:", r.status_code, r.text)
     except Exception as e:
         print("❌ Telegram Fehler:", e)
 
-
-def main():
+def run_bot_cycle():
     print("🚀 Starte Bot...")
-
     old_data = load_data()
     print("📦 Alte Daten:", len(old_data))
 
@@ -100,26 +96,28 @@ def main():
     current_data = {}
 
     for item in current_items:
-        # nur aktive Meldungen
         if not item.get("act", False):
             continue
-
         item_id = str(item.get("id"))
-        current_data[item_id] = item  # ganze Meldung speichern
+        current_data[item_id] = item  # Ganzes Item speichern
 
         if item_id not in old_data:
             print("➡️ Neue Störung:", item.get("head"))
             send_telegram(format_message(item, new=True))
 
-    # entfernte Meldungen
     for old_id, old_item in old_data.items():
         if old_id not in current_data:
+            if isinstance(old_item, str):
+                old_item = {"head": old_item}
             print("➡️ Entfernt:", old_item.get("head"))
             send_telegram(format_message(old_item, new=False))
 
     save_data(current_data)
     print("💾 Gespeichert:", len(current_data))
 
-
 if __name__ == "__main__":
-    main()
+    # Optional: alle 5 Minuten wiederholen
+    while True:
+        run_bot_cycle()
+        print("⏱️ Warte 5 Minuten...")
+        time.sleep(5 * 60)  # 5 Minuten Pause

@@ -88,11 +88,10 @@ def send_telegram(message):
     }
 
     try:
-        r = requests.post(url, json=payload)
+        r = requests.post(url, data=payload)  # <-- statt json=payload
         print("📤 Telegram:", r.status_code, r.text)
     except Exception as e:
         print("❌ Telegram Fehler:", e)
-
 
 def main():
     print("🚀 Starte Bot...")

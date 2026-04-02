@@ -13,7 +13,14 @@ DATA_FILE = "data.json"
 def load_data():
     try:
         with open(DATA_FILE, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+
+            # 🔥 FIX: alte Liste → Dict konvertieren
+            if isinstance(data, list):
+                print("⚠️ Alte Datenstruktur erkannt (Liste) → wird konvertiert")
+                return {}
+
+            return data
     except:
         return {}
 

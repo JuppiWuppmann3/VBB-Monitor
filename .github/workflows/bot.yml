@@ -1,12 +1,12 @@
 name: VBB Bot
 
 permissions:
-  contents: write   # wichtig, damit data.json gespeichert werden kann
+  contents: write
 
 on:
   schedule:
     - cron: '*/5 * * * *' # alle 5 Minuten UTC
-  workflow_dispatch:      # manuell starten möglich
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -28,11 +28,17 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
-        
-      - name: Commit data.json
+
+      - name: Commit data.json (nur wenn geändert)
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
+
           git add data.json
-          git commit -m "Update data.json"
-          git push
+
+          if git diff --cached --quiet; then
+            echo "✅ Keine Änderungen – nichts zu committen"
+          else
+            git commit -m "Update data.json"
+            git push
+          fi

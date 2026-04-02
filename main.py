@@ -13,6 +13,9 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 # Datei zum Speichern alter Meldungen
 DATA_FILE = "data.json"
 
+def main():
+    run_bot_cycle()
+
 def load_data():
     try:
         with open(DATA_FILE, "r") as f:

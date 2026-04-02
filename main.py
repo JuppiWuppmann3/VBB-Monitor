@@ -3,8 +3,8 @@ import json
 import os
 import time
 
-# VBB API URL
-VBB_URL = "https://fahrinfo.vbb.de/restproxy/latest/himsearch?accessId=lipsius-4f41-ab9c-1d54b21c347a&format=json"
+VBB_ACCESS_ID = os.getenv("VBB_ACCESS_ID")
+VBB_URL = f"https://fahrinfo.vbb.de/restproxy/latest/himsearch?accessId={VBB_ACCESS_ID}&format=json"
 
 # Telegram
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")

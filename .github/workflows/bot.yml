@@ -1,0 +1,30 @@
+name: VBB Bot
+
+permissions:
+  contents: write   # wichtig, damit data.json gespeichert werden kann
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # alle 5 Minuten UTC
+  workflow_dispatch:      # manuell starten möglich
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py

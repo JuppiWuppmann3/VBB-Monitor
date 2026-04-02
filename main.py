@@ -24,14 +24,21 @@ def save_data(data):
 
 
 def get_disruptions():
-    res = requests.get(VBB_URL)
-    res.raise_for_status()
-    data = res.json()
-    return data.get("himList", [])
+    try:
+        res = requests.get(VBB_URL, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+
+        # ✅ KORREKTES FELD
+        return data.get("HIMMessage", [])
+    except Exception as e:
+        print("❌ API Fehler:", e)
+        return []
 
 
 def format_new(item):
-    title = item.get("headline", "Keine Überschrift")
+    # ✅ KORREKTE FELDER
+    title = item.get("head", "Keine Überschrift")
     desc = item.get("text", "")
     return f"🚧 *Neue Störung*\n\n*{title}*\n{desc}"
 
@@ -47,32 +54,48 @@ def send_telegram(message):
         "text": message,
         "parse_mode": "Markdown"
     }
-    requests.post(url, json=payload)
+
+    try:
+        r = requests.post(url, json=payload)
+        print("📤 Telegram:", r.status_code, r.text)
+    except Exception as e:
+        print("❌ Telegram Fehler:", e)
 
 
 def main():
+    print("🚀 Starte Bot...")
+
     old_data = load_data()
+    print("📦 Alte Daten:", len(old_data))
+
     current_items = get_disruptions()
+    print("📡 API liefert:", len(current_items), "Einträge")
 
     current_data = {}
 
-    # aktuelle IDs sammeln
     for item in current_items:
+        # nur aktive Meldungen
+        if not item.get("act", False):
+            continue
+
         item_id = str(item.get("id"))
-        title = item.get("headline", "Keine Überschrift")
+        title = item.get("head", "Keine Überschrift")
+
         current_data[item_id] = title
 
-        # neue Störung
+        # 🆕 neue Störung
         if item_id not in old_data:
+            print("➡️ Neue Störung:", title)
             send_telegram(format_new(item))
 
-    # entfernte Störungen erkennen
+    # ❌ entfernte Störungen
     for old_id, old_title in old_data.items():
         if old_id not in current_data:
+            print("➡️ Entfernt:", old_title)
             send_telegram(format_removed(old_title))
 
-    # speichern
     save_data(current_data)
+    print("💾 Gespeichert:", len(current_data))
 
 
 if __name__ == "__main__":

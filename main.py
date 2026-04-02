@@ -53,10 +53,26 @@ def get_disruptions():
 
 
 def format_new(item):
-    # ✅ KORREKTE FELDER
     title = item.get("head", "Keine Überschrift")
     desc = item.get("text", "")
-    return f"🚧 *Neue Störung*\n\n*{title}*\n{desc}"
+
+    # 🔥 fallback: messageText nutzen wenn text leer
+    if not desc and "messageText" in item:
+        try:
+            desc = item["messageText"][0]["text"][0]
+        except:
+            desc = ""
+
+    # Linien extrahieren (optional nice)
+    lines = []
+    for prod in item.get("affectedProduct", []):
+        name = prod.get("name")
+        if name:
+            lines.append(name)
+
+    line_info = f"Linien: {', '.join(lines)}\n" if lines else ""
+
+    return f"🚧 *Neue Störung*\n\n*{title}*\n{line_info}{desc}"
 
 
 def format_removed(title):

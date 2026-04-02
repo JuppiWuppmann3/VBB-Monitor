@@ -33,10 +33,12 @@ def save_data(data):
 def get_disruptions():
     try:
         res = requests.get(VBB_URL, timeout=10)
-        res.raise_for_status()
+        print("🌐 Status Code:", res.status_code)
+
         data = res.json()
 
-        # ✅ KORREKTES FELD
+        print("🔍 Keys:", data.keys())
+
         return data.get("HIMMessage", [])
     except Exception as e:
         print("❌ API Fehler:", e)

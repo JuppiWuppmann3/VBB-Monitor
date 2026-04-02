@@ -27,6 +27,7 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VBB_ACCESS_ID: ${{ secrets.VBB_ACCESS_ID }}
         run: python main.py
         
       - name: Commit data.json

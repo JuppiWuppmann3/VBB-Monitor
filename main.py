@@ -61,24 +61,43 @@ def get_disruptions():
 # -------------------
 def format_new(item):
     title = item.get("head", "Keine Überschrift")
+    
+    # 1️⃣ ausführlicher Text
     desc = item.get("text", "")
-
-    # fallback auf messageText
     if not desc and "messageText" in item:
         try:
-            desc = item["messageText"][0]["text"][0]
+            desc = "\n".join([t for mt in item["messageText"] for t in mt.get("text", [])])
         except:
             desc = ""
 
-    # Linien extrahieren
+    # 2️⃣ betroffene Linien/Produkte
     lines = []
     for prod in item.get("affectedProduct", []):
-        name = prod.get("name")
-        if name:
-            lines.append(name)
-
+        if prod.get("name"):
+            lines.append(prod["name"])
     line_info = f"Linien: {', '.join(lines)}\n" if lines else ""
-    return f"🚧 *Neue Störung*\n\n*{title}*\n{line_info}{desc}"
+
+    # 3️⃣ Start- und Endhaltestellen
+    start_stop = item.get("validFromStop", {}).get("name")
+    end_stop = item.get("validToStop", {}).get("name")
+    stop_info = f"Von: {start_stop}\nBis: {end_stop}\n" if start_stop and end_stop else ""
+
+    # 4️⃣ Start- und Endzeit
+    s_date = item.get("sDate")
+    s_time = item.get("sTime")
+    e_date = item.get("eDate")
+    e_time = item.get("eTime")
+    time_info = ""
+    if s_date and s_time and e_date and e_time:
+        time_info = f"⏰ {s_date} {s_time} – {e_date} {e_time}\n"
+
+    # 5️⃣ Betreiber
+    company = item.get("company")
+    company_info = f"🚋 Betreiber: {company}\n" if company else ""
+
+    # fertige Meldung
+    message = f"🚧 *Neue Störung*\n\n*{title}*\n{line_info}{stop_info}{time_info}{company_info}{desc}"
+    return message
 
 
 def format_removed(title):

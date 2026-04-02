@@ -1,7 +1,6 @@
 import requests
 import json
 import os
-import time
 
 VBB_ACCESS_ID = os.getenv("VBB_ACCESS_ID")
 VBB_URL = f"https://fahrinfo.vbb.de/restproxy/latest/himsearch?accessId={VBB_ACCESS_ID}&format=json"
@@ -33,6 +32,7 @@ def load_data():
                     fixed_data[k] = {"head": v}
             return fixed_data
     except:
+        print(f"⚠️ data.json Ladefehler: {e}")
         return {}
 
 def save_data(data):

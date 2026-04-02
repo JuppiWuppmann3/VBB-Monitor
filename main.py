@@ -116,8 +116,4 @@ def run_bot_cycle():
     print("💾 Gespeichert:", len(current_data))
 
 if __name__ == "__main__":
-    # Optional: alle 5 Minuten wiederholen
-    while True:
-        run_bot_cycle()
-        print("⏱️ Warte 5 Minuten...")
-        time.sleep(5 * 60)  # 5 Minuten Pause
+    main()

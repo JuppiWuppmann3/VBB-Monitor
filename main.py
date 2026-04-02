@@ -2,26 +2,29 @@ import requests
 import json
 import os
 
+# 🌐 API URL VBB
 VBB_URL = "https://fahrinfo.vbb.de/restproxy/latest/himsearch?accessId=lipsius-4f41-ab9c-1d54b21c347a&format=json"
 
+# 🔒 Secrets aus GitHub Actions
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 DATA_FILE = "data.json"
 
 
+# -------------------
+# Daten laden / speichern
+# -------------------
 def load_data():
     try:
         with open(DATA_FILE, "r") as f:
             data = json.load(f)
-
-            # 🔥 FIX: alte Liste → Dict konvertieren
+            # alte Liste → Dict konvertieren
             if isinstance(data, list):
                 print("⚠️ Alte Datenstruktur erkannt (Liste) → wird konvertiert")
                 return {}
-
             return data
-    except:
+    except FileNotFoundError:
         return {}
 
 
@@ -30,15 +33,17 @@ def save_data(data):
         json.dump(data, f)
 
 
+# -------------------
+# API Abfrage
+# -------------------
 def get_disruptions():
     try:
         res = requests.get(VBB_URL, timeout=10)
         print("🌐 Status Code:", res.status_code)
-
         data = res.json()
         print("🔍 Keys:", data.keys())
 
-        # 🔥 FIX: beide Varianten abfangen
+        # verschiedene API-Strukturen abfangen
         if "HIMMessage" in data:
             return data["HIMMessage"]
         elif "Message" in data:
@@ -46,24 +51,26 @@ def get_disruptions():
         else:
             print("⚠️ Unbekannte API Struktur")
             return []
-
     except Exception as e:
         print("❌ API Fehler:", e)
         return []
 
 
+# -------------------
+# Meldungen formatieren
+# -------------------
 def format_new(item):
     title = item.get("head", "Keine Überschrift")
     desc = item.get("text", "")
 
-    # 🔥 fallback: messageText nutzen wenn text leer
+    # fallback auf messageText
     if not desc and "messageText" in item:
         try:
             desc = item["messageText"][0]["text"][0]
         except:
             desc = ""
 
-    # Linien extrahieren (optional nice)
+    # Linien extrahieren
     lines = []
     for prod in item.get("affectedProduct", []):
         name = prod.get("name")
@@ -71,7 +78,6 @@ def format_new(item):
             lines.append(name)
 
     line_info = f"Linien: {', '.join(lines)}\n" if lines else ""
-
     return f"🚧 *Neue Störung*\n\n*{title}*\n{line_info}{desc}"
 
 
@@ -79,20 +85,31 @@ def format_removed(title):
     return f"✅ *Störung behoben*\n\n*{title}*"
 
 
+# -------------------
+# Telegram Nachricht senden
+# -------------------
 def send_telegram(message):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        print("❌ Telegram Token oder Chat-ID fehlt!")
+        return
+
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
-        "chat_id": CHAT_ID,
+        "chat_id": str(TELEGRAM_CHAT_ID),
         "text": message,
         "parse_mode": "Markdown"
     }
 
     try:
-        r = requests.post(url, data=payload)  # <-- statt json=payload
+        r = requests.post(url, json=payload)
         print("📤 Telegram:", r.status_code, r.text)
     except Exception as e:
         print("❌ Telegram Fehler:", e)
 
+
+# -------------------
+# Hauptprogramm
+# -------------------
 def main():
     print("🚀 Starte Bot...")
 
